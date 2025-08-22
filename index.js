@@ -22,7 +22,7 @@ const peer = new Peer().on('open', onPeerOpen).on('connection', onPeerConnection
 function onPeerOpen() {
     console.log('PEER OPEN')
     if (rid) onPeerConnection(peer.connect(rid, { reliable: true }))
-    else appendQRCode(`${LOCATION.origin + LOCATION.pathname}?code=${peer.id}`, peer.id)
+    else appendQRCode(`${LOCATION.origin + LOCATION.pathname}?code=${peer.id}`) // peer.id
 }
 
 function onPeerConnection(conn) {
@@ -126,7 +126,7 @@ fileInput.addEventListener('change', () => {
 function appendQRCode(text, tooltip = null) {
     const code = document.createElement('div')
     code.id = 'code'
-    code.append(Object.assign(document.createElement('a'), { href: text, textContent: 'connect' }))
+    // code.append(Object.assign(document.createElement('a'), { href: text, textContent: 'connect' }))
     if (tooltip) {
         code.setAttribute('data-tooltip', tooltip)
         code.setAttribute('data-placement', 'bottom')
