@@ -1,5 +1,5 @@
-const chunk_size = 16384
-const max_buffer = 16006707
+const chunk_size = 16_300
+const max_buffer = 16_000_000
 
 const main = document.querySelector('article main')
 const fileInput = document.querySelector('#fileInput')
@@ -10,30 +10,28 @@ const params = new URLSearchParams(LOCATION.search)
 const rid = params.get('code')
 window.history.replaceState({}, document.title, LOCATION.pathname)
 
+if (navigator.wakeLock) navigator.wakeLock.request('screen')
+
 let connection = null,
     filebuffer,
     received,
     ts
 
-let peer = new Peer()
-    .on('open', () => {
-        console.log('PEER OPEN')
-        if (rid) onConnection(peer.connect(rid, { reliable: true }))
-        else appendQRCode(`${LOCATION.origin + LOCATION.pathname}?code=${peer.id}`, peer.id)
-    })
-    .on('connection', onConnection)
+const peer = new Peer().on('open', onPeerOpen).on('connection', onPeerConnection)
 
-;(async () => {
-    if (!navigator.wakeLock) return
-    await navigator.wakeLock.request('screen')
-})()
+function onPeerOpen() {
+    console.log('PEER OPEN')
+    if (rid) onPeerConnection(peer.connect(rid, { reliable: true }))
+    else appendQRCode(`${LOCATION.origin + LOCATION.pathname}?code=${peer.id}`, peer.id)
+}
 
-function onConnection(conn) {
+function onPeerConnection(conn) {
     main.replaceChildren()
     connection = conn
         .on('open', () => {
             fileInput.disabled = false
             console.log('CONNECTION ESTABLISHED')
+            connection.dataChannel.onmessage = onDataChannelMessage
         })
         .on('close', () => {
             fileInput.disabled = true
@@ -44,16 +42,24 @@ function onConnection(conn) {
             console.log('CONNECTION ERROR:')
             console.log(error)
         })
-        .on('data', dataHandler)
 }
 
-async function dataHandler(data) {
-    if (!data.event && filebuffer != null) chunkHandler(data)
-    else if (data.event == 'file_offer') {
+function send(data) {
+    if (data.chunk) connection.dataChannel.send(new Blob([new Uint32Array([data.index]), data.chunk]))
+    else connection.dataChannel.send(JSON.stringify(data))
+}
+
+function onDataChannelMessage(message) {
+    if (typeof message.data == 'string') messageHandler(JSON.parse(message.data))
+    else chunkHandler(message)
+}
+
+function messageHandler(data) {
+    if (data.event == 'file_offer') {
         fileinfo = data.fileinfo
-        connection.send({ event: 'file_answer' })
+        send({ event: 'file_answer' })
     } else if (data.event == 'file_answer') {
-        connection.send({ event: 'file_start' })
+        send({ event: 'file_start' })
         fileInput.disabled = true
         sendFile()
     } else if (data.event == 'file_start') {
@@ -66,32 +72,17 @@ async function dataHandler(data) {
     }
 }
 
-function sendFile() {
-    let start = 0
-    let index = 0
-    const file = fileInput.files[0]
-    while (start < file.size) {
-        if (connection.dataChannel.bufferedAmount > max_buffer) continue
-        connection.send({ index, chunk: file.slice(start, (start += chunk_size + 1)) })
-        const progress = Math.round((start / file.size) * 100)
-        PBAR.style.width = progress + '%'
-        const ptext = `${formatBytes(start)} / ${formatBytes(file.size)}`
-        progressInfo.textContent = ptext
-        index++
-    }
-}
+function chunkHandler(message) {
+    const index = new DataView(message.data.slice(0, 4)).getUint32(0, true)
 
-function chunkHandler(data) {
-    received += data.chunk.byteLength
-
+    received += message.data.byteLength - 4
     const progress = Math.round((received / fileinfo.size) * 100)
     PBAR.style.width = progress + '%'
     const bitrate = formatBytes(Math.round(received / (Date.now() - ts)) * 1000) + '/s'
     const ptext = `${formatBytes(received)} / ${formatBytes(fileinfo.size)} - ${bitrate}`
     progressInfo.textContent = ptext
 
-    // filebuffer.push(data)
-    filebuffer[data.index] = data.chunk
+    filebuffer[index] = message.data.slice(4)
 
     if (received == fileinfo.size) {
         const a = document.createElement('a')
@@ -100,9 +91,28 @@ function chunkHandler(data) {
         a.download = fileinfo.name
         a.href = href = URL.createObjectURL(new Blob(filebuffer, { type: fileinfo.type }))
         main.append(a)
+        a.scrollIntoView()
         filebuffer = null
-        connection.send({ event: 'file_end' })
+        send({ event: 'file_end' })
         fileInput.disabled = false
+    }
+}
+
+async function sendFile() {
+    let start = 0
+    let index = 0
+    const file = fileInput.files[0]
+    while (start < file.size) {
+        if (connection.dataChannel.bufferedAmount > max_buffer) {
+            await new Promise((res) => setTimeout(res, 200))
+            continue
+        }
+
+        send({ index: index++, chunk: file.slice(start, (start += chunk_size + 1)) })
+        const progress = Math.round((start / file.size) * 100)
+        PBAR.style.width = progress + '%'
+        const ptext = `${formatBytes(start)} / ${formatBytes(file.size)}`
+        progressInfo.textContent = ptext
     }
 }
 
@@ -110,12 +120,13 @@ fileInput.addEventListener('change', () => {
     if (!connection) return
     if (!fileInput.files.length) return
     const file = fileInput.files[0]
-    connection.send({ event: 'file_offer', fileinfo: { name: file.name, size: file.size, type: file.type } })
+    send({ event: 'file_offer', fileinfo: { name: file.name, size: file.size, type: file.type } })
 })
 
 function appendQRCode(text, tooltip = null) {
     const code = document.createElement('div')
     code.id = 'code'
+    code.append(Object.assign(document.createElement('a'), { href: text, textContent: 'connect' }))
     if (tooltip) {
         code.setAttribute('data-tooltip', tooltip)
         code.setAttribute('data-placement', 'bottom')
@@ -141,6 +152,5 @@ function formatBytes(bytes, decimals = 1) {
     const dm = Math.max(0, decimals)
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
-    // return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
     return (bytes / Math.pow(k, i)).toFixed(dm) + ' ' + sizes[i]
 }

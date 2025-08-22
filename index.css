@@ -16,10 +16,20 @@
     }
 }
 
+.container {
+    max-width: 600px;
+}
+
+article {
+    margin-bottom: 0;
+}
+
 article main {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    overflow: auto;
+    max-height: calc(100vh - 13rem);
 }
 
 #progress {
@@ -28,6 +38,7 @@ article main {
     width: 0%;
     border-radius: 8px;
     max-width: 100%;
+    transition: width 250ms ease-in-out;
 }
 
 #progressInfo {
