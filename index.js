@@ -6,23 +6,20 @@ const fileInput = document.querySelector('#fileInput')
 const PBAR = document.querySelector('#progress')
 const progressInfo = document.querySelector('#progressInfo')
 const LOCATION = new URL(location.href)
-const params = new URLSearchParams(LOCATION.search)
-const rid = params.get('code')
+const rid = new URLSearchParams(LOCATION.search).get('code')
 window.history.replaceState({}, document.title, LOCATION.pathname)
 
 if (navigator.wakeLock) navigator.wakeLock.request('screen')
 
-let connection = null,
-    filebuffer,
-    received,
-    ts
+let filebuffer, received, ts
+let connection = null
 
 const peer = new Peer().on('open', onPeerOpen).on('connection', onPeerConnection)
 
 function onPeerOpen() {
     console.log('PEER OPEN')
     if (rid) onPeerConnection(peer.connect(rid, { reliable: true }))
-    else appendQRCode(`${LOCATION.origin + LOCATION.pathname}?code=${peer.id}`) // peer.id
+    else appendQRCode(`${LOCATION.origin + LOCATION.pathname}?code=${peer.id}`)
 }
 
 function onPeerConnection(conn) {
@@ -45,20 +42,20 @@ function onPeerConnection(conn) {
 }
 
 function send(data) {
-    if (data.chunk) connection.dataChannel.send(new Blob([new Uint32Array([data.index]), data.chunk]))
+    if (data.chunk) connection.dataChannel.send(new Blob([data.index, data.chunk]))
     else connection.dataChannel.send(JSON.stringify(data))
 }
 
 function onDataChannelMessage(message) {
-    if (typeof message.data == 'string') messageHandler(JSON.parse(message.data))
-    else chunkHandler(message)
+    if (typeof message.data != 'string') chunkHandler(message)
+    else messageHandler(JSON.parse(message.data))
 }
 
 function messageHandler(data) {
-    if (data.event == 'file_offer') {
+    if (data.event == 'file_info') {
         fileinfo = data.fileinfo
-        send({ event: 'file_answer' })
-    } else if (data.event == 'file_answer') {
+        send({ event: 'file_ready' })
+    } else if (data.event == 'file_ready') {
         send({ event: 'file_start' })
         fileInput.disabled = true
         sendFile()
@@ -100,15 +97,14 @@ function chunkHandler(message) {
 
 async function sendFile() {
     let start = 0
-    let index = 0
+    let index = new Uint32Array([0])
     const file = fileInput.files[0]
     while (start < file.size) {
         if (connection.dataChannel.bufferedAmount > max_buffer) {
             await new Promise((res) => setTimeout(res, 200))
             continue
         }
-
-        send({ index: index++, chunk: file.slice(start, (start += chunk_size + 1)) })
+        send({ index, _: index[0]++, chunk: file.slice(start, (start += chunk_size + 1)) })
         const progress = Math.round((start / file.size) * 100)
         PBAR.style.width = progress + '%'
         const ptext = `${formatBytes(start)} / ${formatBytes(file.size)}`
@@ -120,20 +116,13 @@ fileInput.addEventListener('change', () => {
     if (!connection) return
     if (!fileInput.files.length) return
     const file = fileInput.files[0]
-    send({ event: 'file_offer', fileinfo: { name: file.name, size: file.size, type: file.type } })
+    send({ event: 'file_info', fileinfo: { name: file.name, size: file.size, type: file.type } })
 })
 
-function appendQRCode(text, tooltip = null) {
+function appendQRCode(text) {
     const code = document.createElement('div')
     code.id = 'code'
     // code.append(Object.assign(document.createElement('a'), { href: text, textContent: 'connect' }))
-    if (tooltip) {
-        code.setAttribute('data-tooltip', tooltip)
-        code.setAttribute('data-placement', 'bottom')
-    }
-    code.addEventListener('click', () => {
-        navigator.clipboard?.writeText(tooltip)
-    })
     new QRCode(code, {
         text,
         width: 256,

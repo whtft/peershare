@@ -1,19 +1,5 @@
-#code {
-    width: fit-content;
-    margin: 0 auto;
-    background-color: white;
-
-    &:empty {
-        display: none;
-    }
-    img,
-    canvas {
-        max-width: 100%;
-        padding: 10px;
-        /* width: 100%; */
-        margin: 0 auto;
-        display: block;
-    }
+:root {
+    font-size: 1rem;
 }
 
 .container {
@@ -30,6 +16,26 @@ article main {
     gap: 10px;
     overflow: auto;
     max-height: calc(100vh - 13rem);
+}
+
+#code {
+    pointer-events: none;
+    user-select: none;
+    width: fit-content;
+    margin: 0 auto;
+    background-color: white;
+
+    &:empty {
+        display: none;
+    }
+    img,
+    canvas {
+        max-width: 100%;
+        padding: 10px;
+        /* width: 100%; */
+        margin: 0 auto;
+        display: block;
+    }
 }
 
 #progress {
