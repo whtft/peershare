@@ -143,7 +143,9 @@ function getFileInfo(file) {
 function appendQRCode(text) {
     const code = document.createElement('div')
     code.id = 'code'
-    code.append(Object.assign(document.createElement('a'), { href: text, textContent: 'connect' }))
+    if (location.protocol != 'https:') {
+        code.append(Object.assign(document.createElement('a'), { href: text, textContent: 'connect' }))
+    }
     new QRCode(code, {
         text,
         width: 256,
