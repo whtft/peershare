@@ -3,19 +3,32 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="stylesheet" href="pico.min.css" />
-        <link rel="stylesheet" href="index.css" />
-        <script src="peerjs.min.js" defer></script>
-        <script src="qrcode.min.js" defer></script>
-        <script src="index.js" defer></script>
+        <link rel="stylesheet" href="css/pico.min.css" />
+        <link rel="stylesheet" href="css/index.css" />
+        <link rel="shortcut icon" href="favicon.svg" />
+        <script src="js/qrcode.min.js"></script>
+        <script src="js/index.js" type="module" defer></script>
         <title>PeerShare</title>
     </head>
     <body>
-        <main class="container">
-            <article>
-                <main></main>
-                <footer><input type="file" id="fileInput" disabled /></footer>
-            </article>
+        <header id="header">
+            <nav class="cntnr">
+                <ul>
+                    <li>
+                        <a id="logo"><img src="favicon.svg" draggable="false" /><strong>PeerShare</strong></a>
+                    </li>
+                </ul>
+                <ul>
+                    <li>
+                        <label id="fileInputLbl" role="button" disabled>
+                            Share<input type="file" id="fileInput" hidden />
+                        </label>
+                    </li>
+                </ul>
+            </nav>
+        </header>
+        <main class="cntnr">
+            <section><main id="main"></main></section>
         </main>
     </body>
 </html>
