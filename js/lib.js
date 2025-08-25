@@ -57,55 +57,68 @@ export class PeerConnection {
     messageHandler(data) {
         if (data.event == 'info') {
             this.download = new TransferElement(data.fileinfo)
+            this.download.oncancel = () => this.send({ event: 'cancel', dir: 'down' })
+            this.download.setBusy(true)
             this.send({ event: 'ready' })
         } else if (data.event == 'ready') {
             this.upload = new TransferElement(getFileInfo(fileInput.files[0]))
+            this.upload.oncancel = () => {
+                this.send({ event: 'cancel', dir: 'up' })
+                disableUploadButton(false)
+            }
             this.sendFile(fileInput.files[0])
+            this.upload.setBusy(true)
             disableUploadButton(true)
         } else if (data.event == 'end') {
+            this.upload.setBusy(false)
             disableUploadButton(false)
-            const sz = formatBytes(this.upload.fi.size)
-            this.upload.el.setAttribute('data-info', `${sz} / ${sz} ✓`)
+            this.upload.setInfos(null, 'received')
+        } else if (data.event == 'cancel') {
+            if (data.dir == 'up') this.download.cancel()
+            else {
+                this.upload.cancel()
+                disableUploadButton(false)
+            }
         }
     }
     async sendFile(file) {
         let start = 0
         const index = new Uint32Array([0])
         while (start < file.size) {
+            if (this.upload.cancelled) return
+            if (!this.connection.dataChannel) return this.upload.cancel()
             if (this.connection.dataChannel.bufferedAmount > max_buffer) {
                 await new Promise((res) => setTimeout(res, 50))
                 continue
             }
+
             const chunk = file.slice(start, start + chunk_size + 1)
             this.send({ index, chunk })
             start += chunk.size
             index[0]++
 
             this.upload.setProgress(Math.round((start / file.size) * 100))
-            const ptext = `${formatBytes(start)} / ${formatBytes(file.size)}`
-            this.upload.el.setAttribute('data-info', ptext)
+            const ptext = `▲ ${formatBytes(start)} / ${formatBytes(file.size)}`
+            this.upload.setInfos(ptext)
             // const bitrate = formatBytes(Math.round(start / (Date.now() - this.upload.ts)) * 1000) + '/s'
-            // this.upload.el.setAttribute('data-info2', bitrate)
         }
     }
     onMessage(message) {
-        const index = new DataView(message.data.slice(0, 4)).getUint32(0, true)
+        if (this.download.cancelled) return
 
+        const index = new DataView(message.data.slice(0, 4)).getUint32(0, true)
         this.download.received += message.data.byteLength - 4
         this.download.fb[index] = message.data.slice(4)
 
         const percent = Math.round((this.download.received / this.download.fi.size) * 100)
         this.download.setProgress(percent)
-        const ptext = `${formatBytes(this.download.received)} / ${formatBytes(this.download.fi.size)}`
-        this.download.el.setAttribute('data-info', ptext)
+        const ptext = `▼ ${formatBytes(this.download.received)} / ${formatBytes(this.download.fi.size)}`
         const bitrate = formatBytes(Math.round(this.download.received / (Date.now() - this.download.ts)) * 1000) + '/s'
-        this.download.el.setAttribute('data-info2', bitrate)
+        this.download.setInfos(ptext + ' - ' + bitrate)
 
         if (this.download.received == this.download.fi.size) {
-            this.download.el.classList.remove('secondary')
-            this.download.el.setAttribute('data-info', ptext + ' ✓')
-            this.download.el.href = URL.createObjectURL(new Blob(this.download.fb, { type: this.download.fi.type }))
-            this.download.el.scrollIntoView()
+            this.download.setBusy(false)
+            this.download.setUrl(URL.createObjectURL(new Blob(this.download.fb, { type: this.download.fi.type })))
             this.send({ event: 'end' })
         }
     }
@@ -121,26 +134,71 @@ export class PeerConnection {
 }
 
 export class TransferElement {
-    el
+    #anchor
+    #infosL
+    #infosR
+    #cancelBtn
     fb = []
     received = 0
     ts = Date.now()
     fi
+    cancelled = false
+    oncancel = () => {}
     constructor(fileInfo) {
         this.fi = fileInfo
-        this.el = Object.assign(document.createElement('a'), {
+        const wrapper = Object.assign(document.createElement('div'), { className: 'wrapper' })
+        const infoWrapper = Object.assign(document.createElement('div'), { className: 'infos' })
+        this.#infosL = document.createElement('div')
+        this.#infosR = document.createElement('div')
+        infoWrapper.append(this.#infosL, this.#infosR)
+        this.#anchor = Object.assign(document.createElement('a'), {
             textContent: fileInfo.name,
             download: fileInfo.name,
             role: 'button',
             className: 'file-link secondary',
         })
-        main.append(this.el)
-        this.el.scrollIntoView()
+        this.#cancelBtn = Object.assign(document.createElement('a'), { textContent: 'cancel' })
+        this.#cancelBtn.addEventListener('click', (e) => {
+            e.preventDefault()
+            this.cancel()
+            this.oncancel()
+        })
+        this.setInfos(null, this.#cancelBtn)
+        wrapper.append(this.#anchor, infoWrapper)
+        main.append(wrapper)
+        wrapper.scrollIntoView()
+    }
+    cancel() {
+        this.cancelled = true
+        this.setInfos(null, 'cancelled')
+        this.setBusy(false)
+    }
+    setInfos(left, right) {
+        if (!isNill(left)) {
+            if (typeof left == 'string') this.#infosL.textContent = left
+            else this.#infosL.replaceChildren(left)
+        }
+        if (!isNill(right)) {
+            if (typeof right == 'string') this.#infosR.textContent = right
+            else this.#infosR.replaceChildren(right)
+        }
     }
     setProgress(percent) {
         percent = Math.max(0, Math.min(100, percent))
-        this.el.style.setProperty('--percent', `${percent}%`)
+        this.#anchor.style.setProperty('--percent', `${percent}%`)
     }
+    setBusy(busy) {
+        this.#anchor.setAttribute('aria-busy', busy)
+        if (!busy) this.#cancelBtn.remove()
+    }
+    setUrl(url) {
+        this.#anchor.href = url
+        this.#anchor.classList.remove('secondary')
+    }
+}
+
+function isNill(obj) {
+    return obj === null || obj === undefined
 }
 
 function disableUploadButton(disable) {

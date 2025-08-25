@@ -57,37 +57,40 @@ header {
 section main {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 2rem;
+    margin-bottom: 2rem;
 }
 
-.file-link {
-    --percent: 0%;
-    background: linear-gradient(to right, var(--pico-background-color) 50%, transparent 50%) !important;
-    background-position: calc(100% - var(--percent)) !important;
-    background-size: 200% !important;
-    transition: background 250ms ease-in-out;
+.wrapper {
     position: relative;
-    margin-bottom: 20px;
-    &.secondary {
-        pointer-events: none;
+
+    a {
+        cursor: pointer;
     }
-    &::after {
+    a.file-link {
+        --percent: 0%;
+        width: 100%;
+        text-shadow: 0 0 0.5rem black;
+        background: linear-gradient(to right, var(--pico-background-color) 50%, transparent 50%) !important;
+        background-position: calc(100% - var(--percent)) !important;
+        background-size: 201% !important;
+        transition: background 250ms ease-in-out;
+        position: relative;
+
+        &.secondary {
+            pointer-events: none;
+        }
+    }
+
+    .infos {
         position: absolute;
-        content: attr(data-info);
-        bottom: -22px;
-        left: 0px;
+        bottom: -20px;
+        width: 100%;
         color: var(--pico-muted-color);
         font-family: monospace;
         font-size: small;
-    }
-    &::before {
-        position: absolute;
-        content: attr(data-info2);
-        bottom: -22px;
-        right: 0px;
-        color: var(--pico-muted-color);
-        font-family: monospace;
-        font-size: small;
+        display: flex;
+        justify-content: space-between;
     }
 }
 
