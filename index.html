@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="stylesheet" href="css/pico.min.css" />
         <link rel="stylesheet" href="css/index.css" />
-        <link rel="shortcut icon" href="favicon.svg" />
+        <link rel="shortcut icon" href="img/favicon.svg" />
         <script src="js/qrcode.min.js"></script>
         <script src="js/index.js" type="module" defer></script>
         <title>PeerShare</title>
@@ -15,13 +15,13 @@
             <nav class="cntnr">
                 <ul>
                     <li>
-                        <a id="logo"><img src="favicon.svg" draggable="false" /><strong>PeerShare</strong></a>
+                        <a id="logo"><img src="img/favicon.svg" draggable="false" /><strong>PeerShare</strong></a>
                     </li>
                 </ul>
                 <ul>
                     <li>
                         <label id="fileInputLbl" role="button" disabled>
-                            Send<input type="file" id="fileInput" hidden />
+                            Send File<input type="file" id="fileInput" hidden />
                         </label>
                     </li>
                 </ul>
@@ -30,6 +30,12 @@
         <main class="cntnr">
             <section>
                 <main id="main"></main>
+                <div role="group" id="textBox" hidden>
+                    <input type="text" id="textInput" enterkeyhint="send" />
+                    <button type="submit" id="sendTextBtn">
+                        <svg><use href="img/paper-plane.svg#img"></use></svg>
+                    </button>
+                </div>
             </section>
         </main>
     </body>

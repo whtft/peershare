@@ -5,6 +5,7 @@ const max_buffer = 16_000_000 / 2
 
 const LOCATION = new URL(location.href)
 const main = document.querySelector('#main')
+const textBox = document.querySelector('#textBox')
 const fileInput = document.querySelector('#fileInput')
 const fileInputLbl = document.querySelector('#fileInputLbl')
 
@@ -30,11 +31,13 @@ export class PeerConnection {
         this.connection = conn
             .on('open', () => {
                 disableUploadButton(false)
+                hideTextBox(false)
                 console.log('CONNECTION ESTABLISHED', this.connection.peer)
                 this.connection.dataChannel.onmessage = (m) => this.onDataChannelMessage(m)
             })
             .on('close', () => {
                 disableUploadButton(true)
+                hideTextBox(true)
                 console.log('CONNECTION CLOSED')
                 if (main.matches(':empty')) {
                     this.appendQRCode(`${LOCATION.origin + LOCATION.pathname}?code=${this.peer.id}`)
@@ -42,6 +45,7 @@ export class PeerConnection {
             })
             .on('error', (error) => {
                 disableUploadButton(true)
+                hideTextBox(true)
                 console.log('CONNECTION ERROR')
                 console.error(error)
             })
@@ -50,8 +54,30 @@ export class PeerConnection {
         if (data.chunk) this.connection.dataChannel.send(new Blob([data.index, data.chunk]))
         else this.connection.dataChannel.send(JSON.stringify(data))
     }
+    async sendFile(file) {
+        let start = 0
+        const index = new Uint32Array([0])
+        while (start < file.size) {
+            if (this.upload.cancelled) return
+            if (!this.connection.dataChannel) return this.upload.cancel()
+            if (this.connection.dataChannel.bufferedAmount > max_buffer) {
+                await new Promise((res) => setTimeout(res, 50))
+                continue
+            }
+
+            const chunk = file.slice(start, start + chunk_size + 1)
+            this.send({ index, chunk })
+            start += chunk.size
+            index[0]++
+
+            this.upload.setProgress(Math.round((start / file.size) * 100))
+            const ptext = `▲ ${formatBytes(start)} / ${formatBytes(file.size)}`
+            this.upload.setInfos(ptext)
+            // const bitrate = formatBytes(Math.round(start / (Date.now() - this.upload.ts)) * 1000) + '/s'
+        }
+    }
     onDataChannelMessage(message) {
-        if (typeof message.data != 'string') this.onMessage(message)
+        if (typeof message.data != 'string') this.dataHandler(message)
         else this.messageHandler(JSON.parse(message.data))
     }
     messageHandler(data) {
@@ -79,31 +105,11 @@ export class PeerConnection {
                 this.upload.cancel()
                 disableUploadButton(false)
             }
+        } else if (data.event == 'message') {
+            appendMessage(data.message, false)
         }
     }
-    async sendFile(file) {
-        let start = 0
-        const index = new Uint32Array([0])
-        while (start < file.size) {
-            if (this.upload.cancelled) return
-            if (!this.connection.dataChannel) return this.upload.cancel()
-            if (this.connection.dataChannel.bufferedAmount > max_buffer) {
-                await new Promise((res) => setTimeout(res, 50))
-                continue
-            }
-
-            const chunk = file.slice(start, start + chunk_size + 1)
-            this.send({ index, chunk })
-            start += chunk.size
-            index[0]++
-
-            this.upload.setProgress(Math.round((start / file.size) * 100))
-            const ptext = `▲ ${formatBytes(start)} / ${formatBytes(file.size)}`
-            this.upload.setInfos(ptext)
-            // const bitrate = formatBytes(Math.round(start / (Date.now() - this.upload.ts)) * 1000) + '/s'
-        }
-    }
-    onMessage(message) {
+    dataHandler(message) {
         if (this.download.cancelled) return
 
         const index = new DataView(message.data.slice(0, 4)).getUint32(0, true)
@@ -131,6 +137,13 @@ export class PeerConnection {
         qr.querySelectorAll('img, canvas').forEach((e) => (e.draggable = false))
         main.replaceChildren(qr)
     }
+}
+
+export function appendMessage(textContent, sender = false) {
+    const messageEl = Object.assign(document.createElement('div'), { className: 'text-message', textContent })
+    messageEl.classList.toggle('sender', sender)
+    main.append(messageEl)
+    messageEl.scrollIntoView()
 }
 
 export class TransferElement {
@@ -203,6 +216,10 @@ function isNill(obj) {
 
 function disableUploadButton(disable) {
     fileInputLbl.toggleAttribute('disabled', disable)
+}
+
+function hideTextBox(hidden) {
+    textBox.toggleAttribute('hidden', hidden)
 }
 
 export function formatBytes(bytes, decimals = 1) {

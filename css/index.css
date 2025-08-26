@@ -94,6 +94,35 @@ section main {
     }
 }
 
+.text-message {
+    padding: 10px;
+    white-space: preserve-spaces;
+    background: var(--pico-card-background-color);
+    border-radius: var(--pico-border-radius);
+    box-shadow: var(--pico-card-box-shadow);
+    max-width: 70%;
+    width: fit-content;
+    margin-bottom: -1rem;
+    &.sender {
+        align-self: flex-end;
+        background-color: var(--pico-primary);
+        color: var(--pico-primary-inverse);
+    }
+}
+
+#textBox {
+    position: sticky;
+    bottom: 2rem;
+    box-shadow: var(--pico-box-shadow);
+    #sendTextBtn {
+        padding: 0 15px;
+        svg {
+            width: 20px;
+            height: 20px;
+        }
+    }
+}
+
 #code {
     user-select: none;
     margin: 0 auto;
