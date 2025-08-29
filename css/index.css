@@ -57,44 +57,12 @@ header {
 section main {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1rem;
     margin-bottom: 2rem;
 }
 
-.wrapper {
-    position: relative;
-
-    a {
-        cursor: pointer;
-    }
-    a.file-link {
-        --percent: 0%;
-        width: 100%;
-        text-shadow: 0 0 0.5rem black;
-        background: linear-gradient(to right, var(--pico-background-color) 50%, transparent 50%) !important;
-        background-position: calc(100% - var(--percent)) !important;
-        background-size: 201% !important;
-        transition: background 250ms ease-in-out;
-        position: relative;
-
-        &.secondary {
-            pointer-events: none;
-        }
-    }
-
-    .infos {
-        position: absolute;
-        bottom: -20px;
-        width: 100%;
-        color: var(--pico-muted-color);
-        font-family: monospace;
-        font-size: small;
-        display: flex;
-        justify-content: space-between;
-    }
-}
-
 .text-message {
+    position: relative;
     padding: 10px;
     white-space: preserve-spaces;
     background: var(--pico-card-background-color);
@@ -102,11 +70,46 @@ section main {
     box-shadow: var(--pico-card-box-shadow);
     max-width: 70%;
     width: fit-content;
-    margin-bottom: -1rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    img,
+    video {
+        border-radius: var(--pico-border-radius);
+    }
+
     &.sender {
         align-self: flex-end;
-        background-color: var(--pico-primary);
-        color: var(--pico-primary-inverse);
+        background-color: var(--pico-switch-background-color);
+    }
+    .file-link {
+        --percent: 0%;
+        width: 100%;
+        text-decoration: none;
+        position: relative;
+        white-space: break-spaces !important;
+    }
+    .infos {
+        width: 100%;
+        color: var(--pico-muted-color);
+        font-family: monospace;
+        font-size: small;
+        display: flex;
+        justify-content: space-between;
+        gap: 2rem;
+
+        a {
+            cursor: pointer;
+        }
+    }
+    .pbar {
+        position: absolute;
+        height: 2px;
+        background-color: var(--pico-primary-hover-underline);
+        bottom: 0;
+        left: 0;
     }
 }
 
@@ -114,13 +117,20 @@ section main {
     position: sticky;
     bottom: 2rem;
     box-shadow: var(--pico-box-shadow);
-    #sendTextBtn {
-        padding: 0 15px;
+    #sendBtn {
+        padding: 0px 15px !important;
+        display: flex;
         svg {
+            margin: auto;
             width: 20px;
             height: 20px;
         }
     }
+}
+
+#connectBtn {
+    height: 32px;
+    padding: 0 0.5rem;
 }
 
 #code {
@@ -133,5 +143,61 @@ section main {
         padding: 10px;
         margin: 0 auto;
         display: block;
+    }
+}
+
+[data-icon='file'] #sendMsg {
+    display: none;
+}
+
+[data-icon='text'] #sendFile {
+    display: none;
+}
+
+[data-disabled][data-icon='file'] #sendFile {
+    display: none;
+}
+
+#loading {
+    display: none;
+    g {
+        animation: rotate 2s linear infinite;
+        transform-origin: center center;
+    }
+    circle {
+        stroke-dasharray: 75, 100;
+        stroke-dashoffset: -5;
+        animation: dash 1.5s ease-in-out infinite;
+        stroke-linecap: round;
+        stroke-width: 4;
+        stroke: currentColor;
+        fill: none;
+    }
+}
+
+[data-disabled][data-icon='file'] #loading {
+    display: block;
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1, 100;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 44.5, 100;
+        stroke-dashoffset: -17.5;
+    }
+    100% {
+        stroke-dasharray: 44.5, 100;
+        stroke-dashoffset: -62;
     }
 }

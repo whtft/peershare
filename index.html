@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
         <link rel="stylesheet" href="css/pico.min.css" />
         <link rel="stylesheet" href="css/index.css" />
         <link rel="shortcut icon" href="img/favicon.svg" />
@@ -20,9 +20,7 @@
                 </ul>
                 <ul>
                     <li>
-                        <label id="fileInputLbl" role="button" disabled>
-                            Send File<input type="file" id="fileInput" hidden />
-                        </label>
+                        <button id="connectBtn">Connect</button>
                     </li>
                 </ul>
             </nav>
@@ -31,12 +29,17 @@
             <section>
                 <main id="main"></main>
                 <div role="group" id="textBox" hidden>
-                    <input type="text" id="textInput" enterkeyhint="send" />
-                    <button type="submit" id="sendTextBtn">
-                        <svg><use href="img/paper-plane.svg#img"></use></svg>
+                    <input type="text" id="textInput" enterkeyhint="send" placeholder="Message..." />
+                    <button type="submit" id="sendBtn" data-icon="file">
+                        <svg id="sendMsg"><use href="img/paper-plane.svg#img"></use></svg>
+                        <svg id="sendFile"><use href="img/upload.svg#img"></use></svg>
+                        <svg id="loading" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <g><circle cx="12" cy="12" r="10" /></g>
+                        </svg>
                     </button>
                 </div>
             </section>
+            <input type="file" id="fileInput" hidden />
         </main>
     </body>
 </html>

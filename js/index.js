@@ -2,12 +2,14 @@ import { PeerConnection, getFileInfo, appendMessage } from './lib.js'
 
 if (navigator.wakeLock) navigator.wakeLock.request('screen')
 
-const LOCATION = new URL(location.href)
-const fileInput = document.querySelector('#fileInput')
-/** @type {HTMLInputElement} */
-const textInput = document.querySelector('#textInput')
-const sendTextBtn = document.querySelector('#sendTextBtn')
-const header = document.querySelector('#header')
+export const LOCATION = new URL(location.href)
+export const textInput = document.querySelector('#textInput')
+export const header = document.querySelector('#header')
+export const main = document.querySelector('#main')
+export const textBox = document.querySelector('#textBox')
+export const fileInput = document.querySelector('#fileInput')
+export const sendBtn = document.querySelector('#sendBtn')
+export const connectBtn = document.querySelector('#connectBtn')
 
 window.history.replaceState({}, document.title, LOCATION.pathname)
 document.querySelector('#logo').href = LOCATION.pathname
@@ -19,18 +21,33 @@ fileInput.addEventListener('change', () => {
     PC.send({ event: 'info', fileinfo: getFileInfo(fileInput.files[0]) })
 })
 
-textInput.addEventListener('keydown', (e) => {
+textInput.addEventListener('keyup', (e) => {
     if (e.key.includes('Enter')) sendText()
+    swapSendBtnImage(!!textInput.value)
 })
 
-sendTextBtn.addEventListener('click', sendText)
+sendBtn.addEventListener('click', sendText)
+
+connectBtn.addEventListener('click', () => {
+    const rpid = prompt('Remote ID:')
+    if (!rpid) return
+    PC.connectTo(rpid)
+})
 
 function sendText() {
     const message = textInput.value.trim()
-    if (message === '') return
+    if (message === '') {
+        if (sendBtn.matches('[data-disabled]')) return
+        return fileInput.click()
+    }
     textInput.value = ''
+    swapSendBtnImage(false)
     appendMessage(message, true)
     PC.send({ event: 'message', message })
+}
+
+function swapSendBtnImage(willSendText) {
+    sendBtn.setAttribute('data-icon', willSendText ? 'text' : 'file')
 }
 
 window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 0))
