@@ -20,14 +20,9 @@ fileInput.addEventListener('change', () => {
     if (!PC?.connection || !fileInput.files.length) return
     PC.send({ event: 'info', fileinfo: getFileInfo(fileInput.files[0]) })
 })
-
-textInput.addEventListener('keyup', (e) => {
-    if (e.key.includes('Enter')) sendText()
-    swapSendBtnImage(!!textInput.value)
-})
-
+textInput.addEventListener('keyup', (e) => e.key.includes('Enter') && sendText())
+textInput.addEventListener('input', swapSendBtnImage)
 sendBtn.addEventListener('click', sendText)
-
 connectBtn.addEventListener('click', () => {
     const rpid = prompt('Remote ID:')
     if (!rpid) return
@@ -41,13 +36,14 @@ function sendText() {
         return fileInput.click()
     }
     textInput.value = ''
-    swapSendBtnImage(false)
+    swapSendBtnImage()
     appendMessage(message, true)
     PC.send({ event: 'message', message })
 }
 
-function swapSendBtnImage(willSendText) {
-    sendBtn.setAttribute('data-icon', willSendText ? 'text' : 'file')
+function swapSendBtnImage() {
+    const txt = !!textInput.value
+    sendBtn.setAttribute('data-icon', txt ? 'text' : 'file')
 }
 
 window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 0))
