@@ -1,6 +1,11 @@
 :root {
     font-size: 1rem;
 }
+@media (any-pointer: coarse) {
+    :root {
+        font-size: 0.7rem;
+    }
+}
 
 :host:not([data-theme='dark']),
 :root:not([data-theme='dark']),
@@ -68,7 +73,7 @@ section main {
     background: var(--pico-card-background-color);
     border-radius: var(--pico-border-radius);
     box-shadow: var(--pico-card-box-shadow);
-    max-width: 70%;
+    max-width: 80%;
     width: fit-content;
     overflow: hidden;
     display: flex;
@@ -78,6 +83,9 @@ section main {
     img,
     video {
         border-radius: var(--pico-border-radius);
+        width: fit-content;
+        margin: 0 auto;
+        max-width: 100%;
     }
 
     &.sender {
@@ -95,7 +103,7 @@ section main {
         width: 100%;
         color: var(--pico-muted-color);
         font-family: monospace;
-        font-size: small;
+        font-size: 0.7em;
         display: flex;
         justify-content: space-between;
         gap: 2rem;
@@ -200,4 +208,14 @@ section main {
         stroke-dasharray: 44.5, 100;
         stroke-dashoffset: -62;
     }
+}
+
+iframe {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: auto;
+    width: 100svw;
+    height: 100svh;
+    z-index: 100;
 }

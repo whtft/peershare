@@ -1,6 +1,7 @@
 import { PeerConnection, getFileInfo, appendMessage } from './lib.js'
 
 if (navigator.wakeLock) navigator.wakeLock.request('screen')
+// if (!navigator.userAgent.includes('Mobile')) document.documentElement.style.setProperty('font-size', '1rem')
 
 export const LOCATION = new URL(location.href)
 export const textInput = document.querySelector('#textInput')
@@ -18,10 +19,15 @@ const PC = new PeerConnection(new URLSearchParams(LOCATION.search).get('code'))
 
 fileInput.addEventListener('change', () => {
     if (!PC?.connection || !fileInput.files.length) return
-    PC.send({ event: 'info', fileinfo: getFileInfo(fileInput.files[0]) })
+    PC.send({ event: 'info', fileinfo: getFileInfo(fileInput.files[0]) }, fileInput.files[0])
+})
+document.addEventListener('paste', (evt) => {
+    if (!PC?.connection) return
+    PC.onPaste(evt.clipboardData)
 })
 textInput.addEventListener('keyup', (e) => e.key.includes('Enter') && sendText())
 textInput.addEventListener('input', swapSendBtnImage)
+textInput.addEventListener('focus', () => scrollToBottom(500))
 sendBtn.addEventListener('click', sendText)
 connectBtn.addEventListener('click', () => {
     const rpid = prompt('Remote ID:')
@@ -44,6 +50,13 @@ function sendText() {
 function swapSendBtnImage() {
     const txt = !!textInput.value
     sendBtn.setAttribute('data-icon', txt ? 'text' : 'file')
+}
+
+const root = document.documentElement
+const scroll = (behavior) => root.scrollTo({ top: root.scrollHeight + 500, behavior })
+export function scrollToBottom(timeout = 0, behavior = 'smooth') {
+    if (timeout > 0) setTimeout(() => scroll(behavior), timeout)
+    else scroll(behavior)
 }
 
 window.addEventListener('scroll', () => header.classList.toggle('scrolled', window.scrollY > 0))

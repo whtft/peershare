@@ -1,9 +1,8 @@
 import { Peer } from './peerjs.min.js'
-import { sendBtn, fileInput, connectBtn, main, textBox, LOCATION } from './index.js'
+import { sendBtn, fileInput, connectBtn, main, textBox, LOCATION, scrollToBottom } from './index.js'
 
 const chunk_size = 16_300
 const max_buffer = 16_000_000 / 2
-const root = document.documentElement
 
 export class PeerConnection {
     peer
@@ -12,6 +11,7 @@ export class PeerConnection {
     download
     /** @type {TransferElement} */
     upload
+    file
     constructor(rpid) {
         this.peer = new Peer()
         this.peer.on('open', (pid) => this.onPeerOpen(pid, rpid))
@@ -24,6 +24,11 @@ export class PeerConnection {
     }
     connectTo(rpid) {
         if (rpid) this.onPeerConnection(this.peer.connect(rpid, { reliable: true }))
+    }
+    onPaste(clipboardData) {
+        if (!clipboardData.types.includes('Files')) return
+        if (sendBtn.hasAttribute('data-disabled')) return
+        this.send({ event: 'info', fileinfo: getFileInfo(clipboardData.files[0]) }, clipboardData.files[0])
     }
     onPeerConnection(conn) {
         this.connection = conn
@@ -52,7 +57,8 @@ export class PeerConnection {
                 console.error(error)
             })
     }
-    send(data) {
+    send(data, file = null) {
+        if (file) this.file = file
         if (data.chunk) this.connection.dataChannel.send(new Blob([data.index, data.chunk]))
         else this.connection.dataChannel.send(JSON.stringify(data))
     }
@@ -90,12 +96,12 @@ export class PeerConnection {
             this.download.setBusy(true)
             this.send({ event: 'ready' })
         } else if (data.event == 'ready') {
-            this.upload = new TransferElement(getFileInfo(fileInput.files[0]), true)
+            this.upload = new TransferElement(getFileInfo(this.file), true)
             this.upload.oncancel = () => {
                 this.send({ event: 'cancel', dir: 'up' })
                 disableUploadButton(false)
             }
-            this.sendFile(fileInput.files[0])
+            this.sendFile(this.file)
             this.upload.setBusy(true)
             disableUploadButton(true)
         } else if (data.event == 'end') {
@@ -149,7 +155,7 @@ export function appendMessage(textContent, sender = false) {
     const messageEl = Object.assign(document.createElement('div'), { className: 'text-message', textContent })
     messageEl.classList.toggle('sender', sender)
     main.append(messageEl)
-    root.scrollTo(0, root.scrollHeight)
+    scrollToBottom()
 }
 
 export class TransferElement {
@@ -194,16 +200,18 @@ export class TransferElement {
         this.#wrapper.remove()
     }
     appendContent(src, type) {
-        let tagName = null
-        if (type.includes('image')) tagName = 'img'
-        else if (type.includes('video')) tagName = 'video'
-
-        if (tagName) {
-            const element = Object.assign(document.createElement(tagName), { src, controls: true })
-            this.#anchor.insertAdjacentElement('afterend', element)
-            element.onload = () => root.scrollTo(0, root.scrollHeight)
-            element.onloadedmetadata = () => root.scrollTo(0, root.scrollHeight)
+        let element
+        if (type.includes('image')) {
+            element = Object.assign(document.createElement('a'), { href: src, target: '_blank' })
+            const img = Object.assign(document.createElement('img'), { src })
+            element.append(img)
+            img.onload = () => scrollToBottom()
+        } else if (type.includes('video')) {
+            element = Object.assign(document.createElement('video'), { src, controls: true })
+            element.onloadedmetadata = () => scrollToBottom()
         }
+
+        if (element) this.#anchor.insertAdjacentElement('afterend', element)
     }
     cancel() {
         this.cancelled = true
